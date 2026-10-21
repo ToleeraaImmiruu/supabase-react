@@ -1,0 +1,368 @@
+import { useEffect, useState } from "react";
+import { supabase } from "./supabaseClient";
+import "./App.css";
+
+// Must match the real table name in Supabase exactly ("products" or "product").
+const TABLE = "products";
+
+function formatPrice(value) {
+  return Number(value).toLocaleString("en-US", {
+    style: "currency",
+    currency: "USD",
+  });
+}
+
+function App() {
+  // ---------- Data state ----------
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState(null); // { type: "success" | "error", text }
+
+  // ---------- Add form state ----------
+  const [newName, setNewName] = useState("");
+  const [newPrice, setNewPrice] = useState("");
+  const [adding, setAdding] = useState(false);
+
+  // ---------- Edit state ----------
+  const [editingId, setEditingId] = useState(null);
+  const [editName, setEditName] = useState("");
+  const [editPrice, setEditPrice] = useState("");
+  const [savingId, setSavingId] = useState(null);
+
+  // ---------- Delete state ----------
+  const [deletingId, setDeletingId] = useState(null);
+
+  // READ: load all products once when the page opens
+  useEffect(() => {
+    async function fetchProducts() {
+      try {
+        const { data, error } = await supabase
+          .from(TABLE)
+          .select("*")
+          .order("id");
+
+        if (error) {
+          setError(error.message);
+        } else {
+          setProducts(data);
+        }
+      } catch (err) {
+        setError(err.message || "Something went wrong.");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchProducts();
+  }, []);
+
+  // Hide the notice automatically after 3.5 seconds
+  useEffect(() => {
+    if (!notice) return;
+    const timer = setTimeout(() => setNotice(null), 3500);
+    return () => clearTimeout(timer);
+  }, [notice]);
+
+  // CREATE: add a new product
+  async function handleAdd(e) {
+    e.preventDefault();
+
+    const name = newName.trim();
+    const price = Number(newPrice);
+
+    if (!name) {
+      setNotice({ type: "error", text: "Enter a product name." });
+      return;
+    }
+    if (newPrice === "" || Number.isNaN(price) || price < 0) {
+      setNotice({ type: "error", text: "Enter a price of 0 or more." });
+      return;
+    }
+
+    setAdding(true);
+
+    const { data, error } = await supabase
+      .from(TABLE)
+      .insert({ name, price })
+      .select()
+      .single();
+
+    setAdding(false);
+
+    if (error) {
+      setNotice({ type: "error", text: `Could not add product: ${error.message}` });
+      return;
+    }
+
+    setProducts((current) => [...current, data]);
+    setNewName("");
+    setNewPrice("");
+    setNotice({ type: "success", text: `Added "${data.name}".` });
+  }
+
+  // UPDATE: edit an existing product
+  function startEdit(product) {
+    setEditingId(product.id);
+    setEditName(product.name);
+    setEditPrice(String(product.price));
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setEditName("");
+    setEditPrice("");
+  }
+
+  async function handleSave(id) {
+    const name = editName.trim();
+    const price = Number(editPrice);
+
+    if (!name) {
+      setNotice({ type: "error", text: "Enter a product name." });
+      return;
+    }
+    if (editPrice === "" || Number.isNaN(price) || price < 0) {
+      setNotice({ type: "error", text: "Enter a price of 0 or more." });
+      return;
+    }
+
+    setSavingId(id);
+
+    const { data, error } = await supabase
+      .from(TABLE)
+      .update({ name, price })
+      .eq("id", id)
+      .select();
+
+    setSavingId(null);
+
+    if (error) {
+      setNotice({ type: "error", text: `Could not save changes: ${error.message}` });
+      return;
+    }
+
+    if (!data || data.length === 0) {
+      setNotice({
+        type: "error",
+        text: "Nothing was saved. Check your update policy in Supabase.",
+      });
+      return;
+    }
+
+    setProducts((current) =>
+      current.map((item) => (item.id === id ? data[0] : item))
+    );
+    cancelEdit();
+    setNotice({ type: "success", text: `Saved "${data[0].name}".` });
+  }
+
+  // DELETE: remove a product
+  async function handleDelete(product) {
+    const confirmed = window.confirm(`Delete "${product.name}"? This cannot be undone.`);
+    if (!confirmed) return;
+
+    setDeletingId(product.id);
+
+    const { data, error } = await supabase
+      .from(TABLE)
+      .delete()
+      .eq("id", product.id)
+      .select();
+
+    setDeletingId(null);
+
+    if (error) {
+      setNotice({ type: "error", text: `Could not delete product: ${error.message}` });
+      return;
+    }
+
+    if (!data || data.length === 0) {
+      setNotice({
+        type: "error",
+        text: "Nothing was deleted. Check your delete policy in Supabase.",
+      });
+      return;
+    }
+
+    setProducts((current) => current.filter((item) => item.id !== product.id));
+    if (editingId === product.id) cancelEdit();
+    setNotice({ type: "success", text: `Deleted "${product.name}".` });
+  }
+
+  // ---------- Loading and error screens ----------
+  if (loading) {
+    return (
+      <main className="page">
+        <div className="status-box" role="status">
+          <span className="spinner" aria-hidden="true" />
+          Loading products...
+        </div>
+      </main>
+    );
+  }
+
+  if (error) {
+    return (
+      <main className="page">
+        <div className="status-box status-box--error" role="alert">
+          Could not load products: {error}
+        </div>
+      </main>
+    );
+  }
+
+  // ---------- Main screen ----------
+  return (
+    <main className="page">
+      <header className="page-header">
+        <h1>Products</h1>
+        <p className="count">
+          {products.length} {products.length === 1 ? "item" : "items"}
+        </p>
+      </header>
+
+      {notice && (
+        <div className={`notice notice--${notice.type}`} role="status">
+          {notice.text}
+        </div>
+      )}
+
+      {/* Add form */}
+      <form className="add-form" onSubmit={handleAdd}>
+        <div className="field">
+          <label htmlFor="new-name">Name</label>
+          <input
+            id="new-name"
+            type="text"
+            placeholder="Mechanical keyboard"
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            disabled={adding}
+          />
+        </div>
+
+        <div className="field field--price">
+          <label htmlFor="new-price">Price (USD)</label>
+          <input
+            id="new-price"
+            type="number"
+            min="0"
+            step="0.01"
+            placeholder="49.99"
+            value={newPrice}
+            onChange={(e) => setNewPrice(e.target.value)}
+            disabled={adding}
+          />
+        </div>
+
+        <button type="submit" className="btn btn--primary" disabled={adding}>
+          {adding ? "Adding..." : "Add product"}
+        </button>
+      </form>
+
+      {/* Product list */}
+      {products.length === 0 ? (
+        <div className="empty">
+          <p>No products yet.</p>
+          <p>Use the form above to add your first one.</p>
+        </div>
+      ) : (
+        <div className="table-wrap">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th className="num">Price</th>
+                <th className="actions-col">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {products.map((product) => {
+                const isEditing = editingId === product.id;
+                const isSaving = savingId === product.id;
+                const isDeleting = deletingId === product.id;
+                const busy = isSaving || isDeleting;
+
+                return (
+                  <tr key={product.id} className={busy ? "row row--busy" : "row"}>
+                    <td data-label="Name">
+                      {isEditing ? (
+                        <input
+                          aria-label="Product name"
+                          type="text"
+                          value={editName}
+                          onChange={(e) => setEditName(e.target.value)}
+                          disabled={isSaving}
+                          autoFocus
+                        />
+                      ) : (
+                        product.name
+                      )}
+                    </td>
+
+                    <td data-label="Price" className="num">
+                      {isEditing ? (
+                        <input
+                          aria-label="Product price"
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={editPrice}
+                          onChange={(e) => setEditPrice(e.target.value)}
+                          disabled={isSaving}
+                        />
+                      ) : (
+                        formatPrice(product.price)
+                      )}
+                    </td>
+
+                    <td className="actions-col">
+                      {isEditing ? (
+                        <>
+                          <button
+                            className="btn btn--primary btn--small"
+                            onClick={() => handleSave(product.id)}
+                            disabled={isSaving}
+                          >
+                            {isSaving ? "Saving..." : "Save"}
+                          </button>
+                          <button
+                            className="btn btn--small"
+                            onClick={cancelEdit}
+                            disabled={isSaving}
+                          >
+                            Cancel
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            className="btn btn--small"
+                            onClick={() => startEdit(product)}
+                            disabled={busy || editingId !== null}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            className="btn btn--danger btn--small"
+                            onClick={() => handleDelete(product)}
+                            disabled={busy || editingId !== null}
+                          >
+                            {isDeleting ? "Deleting..." : "Delete"}
+                          </button>
+                        </>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </main>
+  );
+}
+
+export default App;
