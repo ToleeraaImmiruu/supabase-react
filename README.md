@@ -4,7 +4,6 @@
 A simple product application built with React, Vite, and Supabase. The application fetches product data from a Supabase database and displays product names and prices.
 
 ## Features
-
 - Fetch product records from Supabase
 - Display product names and prices
 - Loading state while fetching data
