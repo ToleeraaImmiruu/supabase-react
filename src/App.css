@@ -455,3 +455,157 @@ input:disabled {
   cursor: pointer;
   text-decoration: underline;
 }
+
+/* ---------- Wider page for the card grid ---------- */
+.page--wide {
+  max-width: 1000px;
+}
+
+/* ---------- Textarea ---------- */
+textarea {
+  width: 100%;
+  padding: 9px 12px;
+  font: inherit;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  resize: vertical;
+}
+
+textarea:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  border-color: var(--accent);
+}
+
+textarea:disabled {
+  background: var(--paper);
+  color: var(--ink-soft);
+}
+
+.field--wide {
+  flex: 1 1 100%;
+}
+
+.form-hint {
+  align-self: flex-end;
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+}
+
+/* ---------- Image preview in the add form ---------- */
+.preview-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.preview-thumb {
+  width: 64px;
+  height: 64px;
+  object-fit: cover;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+/* ---------- Product cards ---------- */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 16px;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.card--busy {
+  opacity: 0.6;
+}
+
+.card-media {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 4 / 3;
+  background: var(--paper);
+  border-bottom: 1px solid var(--line);
+}
+
+.card-media img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.card-noimg {
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.card-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+}
+
+.card-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.card-title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.card-price {
+  font-weight: 800;
+  color: var(--accent-dark);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.card-desc {
+  margin: 0;
+  font-size: 0.92rem;
+  color: var(--ink-soft);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.badge--inline {
+  align-self: flex-start;
+  margin-left: 0;
+}
+
+.card-actions {
+  display: flex;
+  gap: 8px;
+  padding: 0 16px 14px;
+}
+
+.image-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.file-btn {
+  cursor: pointer;
+}
